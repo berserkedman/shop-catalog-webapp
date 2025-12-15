@@ -1,19 +1,18 @@
-// Telegram Web App API
 let tg = window.Telegram.WebApp;
 tg.expand();
-tg.ready();
 
-// Корзина и избранное
 let cart = [];
 let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
 
-// ДЕМО-ТОВАРЫ (для портфолио)
-// Позже это будет загружаться из бота через API
+// НАСТРОЙКИ МАГАЗИНА (потом будут из бота)
+const MANAGER_USERNAME = "твой_username"; // ЗАМЕНИ на свой username
+const INFO_URL = "https://telegra.ph/"; // ЗАМЕНИ на ссылку Telegraph статьи
+
 const demoProducts = [
     {
         id: 1,
         name: "Угловой диван 'Комфорт'",
-        description: "Современный угловой диван с механизмом трансформации. Обивка из качественной экокожи. Идеально подойдет для гостиной.",
+        description: "Современный диван с механизмом трансформации. Обивка из качественной экокожи. Идеально подойдет для гостиной.",
         price: 45000,
         oldPrice: 60000,
         photo: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400",
@@ -24,7 +23,6 @@ const demoProducts = [
         name: "Кресло 'Лофт'",
         description: "Стильное кресло в стиле лофт. Прочный каркас, удобное сиденье.",
         price: 15000,
-        oldPrice: null,
         photo: "https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=400",
         category: "Мебель"
     },
@@ -36,57 +34,37 @@ const demoProducts = [
         oldPrice: 12000,
         photo: "https://images.unsplash.com/photo-1594026112284-02bb6f3352fe?w=400",
         category: "Мебель"
-    },
-    {
-        id: 4,
-        name: "Настольная лампа",
-        description: "Современная лампа с регулировкой яркости. Подходит для рабочего стола.",
-        price: 3500,
-        oldPrice: null,
-        photo: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=400",
-        category: "Декор"
-    },
-    {
-        id: 5,
-        name: "Книжный шкаф 'Модерн'",
-        description: "Вместительный шкаф для книг и декора. 5 полок, прочная конструкция.",
-        price: 22000,
-        oldPrice: 28000,
-        photo: "https://images.unsplash.com/photo-1594620302200-9a762244a156?w=400",
-        category: "Мебель"
-    },
-    {
-        id: 6,
-        name: "Декоративная ваза",
-        description: "Керамическая ваза ручной работы. Уникальный дизайн.",
-        price: 2800,
-        oldPrice: null,
-        photo: "https://images.unsplash.com/photo-1578500494198-246f612d3b3d?w=400",
-        category: "Декор"
     }
 ];
 
 let currentCategory = 'all';
-let allProducts = demoProducts;
 
-// Загрузка товаров
+// КНОПКА СВЯЗИ
+document.getElementById('contactBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    tg.openTelegramLink(`https://t.me/${MANAGER_USERNAME}`);
+});
+
+// КНОПКА ИНФО
+document.getElementById('infoBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    tg.openLink(INFO_URL);
+});
+
 function loadProducts() {
     const grid = document.getElementById('productsGrid');
     grid.innerHTML = '';
     
-    let filteredProducts = currentCategory === 'all' 
-        ? allProducts 
-        : allProducts.filter(p => p.category === currentCategory);
+    let filtered = currentCategory === 'all' 
+        ? demoProducts 
+        : demoProducts.filter(p => p.category === currentCategory);
     
-    filteredProducts.forEach(product => {
+    filtered.forEach(product => {
         const card = createProductCard(product);
         grid.appendChild(card);
     });
-    
-    updateFavoriteButtons();
 }
 
-// Создание карточки товара
 function createProductCard(product) {
     const card = document.createElement('div');
     card.className = 'product-card';
@@ -104,13 +82,13 @@ function createProductCard(product) {
             ${isFavorite ? '⭐' : '☆'}
         </button>
         ${discount > 0 ? `<div class="discount-badge">-${discount}%</div>` : ''}
-        <img src="${product.photo}" alt="${product.name}" class="product-image" 
-             onerror="this.src='https://via.placeholder.com/400x400?text=Фото'">
+        <img src="${product.photo}" class="product-image" 
+             onerror="this.src='https://via.placeholder.com/400?text=Фото'">
         <div class="product-info">
             <div class="product-name">${product.name}</div>
             <div>
-                ${product.oldPrice ? `<span class="product-old-price">${formatPrice(product.oldPrice)}</span>` : ''}
-                <div class="product-price">${formatPrice(product.price)}</div>
+                ${product.oldPrice ? `<span class="product-old-price">${product.oldPrice}₽</span>` : ''}
+                <div class="product-price">${product.price}₽</div>
             </div>
         </div>
     `;
@@ -118,7 +96,6 @@ function createProductCard(product) {
     return card;
 }
 
-// Открыть модальное окно товара
 function openProductModal(product) {
     const modal = document.getElementById('productModal');
     const modalBody = document.getElementById('modalBody');
@@ -130,7 +107,7 @@ function openProductModal(product) {
     const isFavorite = favorites.includes(product.id);
     
     modalBody.innerHTML = `
-        <img src="${product.photo}" alt="${product.name}" class="modal-image"
+        <img src="${product.photo}" class="modal-image" 
              onerror="this.src='https://via.placeholder.com/500x300?text=Фото'">
         <div class="modal-body">
             <h2 class="modal-title">${product.name}</h2>
@@ -138,10 +115,10 @@ function openProductModal(product) {
             
             <div class="modal-price-section">
                 ${product.oldPrice ? `
-                    <span class="modal-old-price">${formatPrice(product.oldPrice)}</span>
+                    <span class="modal-old-price">${product.oldPrice}₽</span>
                     <span style="color: #ff4757; font-weight: bold;">Скидка ${discount}%!</span><br>
                 ` : ''}
-                <span class="modal-price">${formatPrice(product.price)}</span>
+                <span class="modal-price">${product.price}₽</span>
             </div>
             
             <div class="modal-buttons">
@@ -156,46 +133,22 @@ function openProductModal(product) {
     `;
     
     modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
 }
 
-// Закрыть модальное окно
 function closeModal() {
     document.getElementById('productModal').style.display = 'none';
+    document.body.style.overflow = 'auto';
 }
 
-// Добавить в корзину
 function addToCart(productId) {
-    const product = allProducts.find(p => p.id === productId);
+    const product = demoProducts.find(p => p.id === productId);
     cart.push(product);
-    updateCartCount();
-    
+    document.getElementById('cartCount').textContent = cart.length;
     tg.showAlert(`✅ ${product.name} добавлен в корзину!`);
     closeModal();
 }
 
-// Обновить счетчик корзины
-function updateCartCount() {
-    document.getElementById('cartCount').textContent = cart.length;
-}
-
-// Открыть корзину
-function openCart() {
-    if (cart.length === 0) {
-        tg.showAlert('Корзина пуста');
-        return;
-    }
-    
-    const total = cart.reduce((sum, item) => sum + item.price, 0);
-    const cartData = {
-        items: cart,
-        total: total
-    };
-    
-    // Отправляем данные в бота
-    tg.sendData(JSON.stringify(cartData));
-}
-
-// Избранное
 function toggleFavorite(productId) {
     const index = favorites.indexOf(productId);
     if (index > -1) {
@@ -204,69 +157,45 @@ function toggleFavorite(productId) {
         favorites.push(productId);
     }
     localStorage.setItem('favorites', JSON.stringify(favorites));
-    updateFavoriteButtons();
     loadProducts();
 }
 
-function updateFavoriteButtons() {
-    document.querySelectorAll('.favorite-btn').forEach(btn => {
-        const productId = parseInt(btn.getAttribute('onclick').match(/\d+/)[0]);
-        if (favorites.includes(productId)) {
-            btn.classList.add('active');
-            btn.textContent = '⭐';
-        } else {
-            btn.classList.remove('active');
-            btn.textContent = '☆';
-        }
-    });
-}
-
-// Фильтр по категориям
 function showCategory(category) {
     currentCategory = category;
-    
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
     });
     event.target.classList.add('active');
-    
     loadProducts();
 }
 
-// Поиск
 function searchProducts() {
     const query = document.getElementById('searchInput').value.toLowerCase();
     const grid = document.getElementById('productsGrid');
     grid.innerHTML = '';
     
-    const filtered = allProducts.filter(p => 
+    const filtered = demoProducts.filter(p => 
         p.name.toLowerCase().includes(query) ||
         p.description.toLowerCase().includes(query)
     );
     
     filtered.forEach(product => {
-        const card = createProductCard(product);
-        grid.appendChild(card);
+        grid.appendChild(createProductCard(product));
     });
 }
 
-// Форматирование цены
-function formatPrice(price) {
-    return new Intl.NumberFormat('ru-RU', {
-        style: 'currency',
-        currency: 'RUB',
-        minimumFractionDigits: 0
-    }).format(price);
+function openCart() {
+    if (cart.length === 0) {
+        tg.showAlert('Корзина пуста');
+        return;
+    }
+    const total = cart.reduce((sum, item) => sum + item.price, 0);
+    tg.sendData(JSON.stringify({items: cart, total: total}));
 }
 
-// Закрытие модалки по клику вне её
 window.onclick = function(event) {
     const modal = document.getElementById('productModal');
-    if (event.target == modal) {
-        closeModal();
-    }
+    if (event.target == modal) closeModal();
 }
 
-// Инициализация
 loadProducts();
-updateCartCount();
