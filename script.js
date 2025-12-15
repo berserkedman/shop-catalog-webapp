@@ -16,7 +16,7 @@ let allProducts = [
     {
         id: 1,
         name: "Угловой диван 'Комфорт'",
-        description: "Современный диван с механизмом трансформации",
+        description: "Современный диван с механизмом трансформации. Обивка из качественной экокожи. Идеально подойдет для гостиной.",
         price: 45000,
         oldPrice: 60000,
         photo: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400",
@@ -25,7 +25,7 @@ let allProducts = [
     {
         id: 2,
         name: "Кресло 'Лофт'",
-        description: "Стильное кресло в стиле лофт",
+        description: "Стильное кресло в стиле лофт. Прочный каркас, удобное сиденье.",
         price: 15000,
         photo: "https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=400",
         category: "Мебель"
@@ -33,7 +33,7 @@ let allProducts = [
     {
         id: 3,
         name: "Журнальный столик",
-        description: "Элегантный столик из дерева",
+        description: "Элегантный столик из натурального дерева с металлическими ножками.",
         price: 8500,
         oldPrice: 12000,
         photo: "https://images.unsplash.com/photo-1594026112284-02bb6f3352fe?w=400",
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Проверяем админа
     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
         // Здесь можно проверить ID админа
-        isAdmin = false; // Установи true для тестирования
+        isAdmin = false; // Установи true для тестирования админ-функций
     }
     
     if (isAdmin) {
@@ -70,7 +70,11 @@ function setupEventListeners() {
     if (contactBtn) {
         contactBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            tg.openTelegramLink(`https://t.me/${MANAGER_USERNAME}`);
+            if (tg.openTelegramLink) {
+                tg.openTelegramLink(`https://t.me/${MANAGER_USERNAME}`);
+            } else {
+                window.open(`https://t.me/${MANAGER_USERNAME}`, '_blank');
+            }
         });
     }
     
@@ -119,11 +123,17 @@ function loadProducts() {
 function createProductCard(product) {
     const card = document.createElement('div');
     card.className = 'product-card';
-    card.onclick = () => openProductModal(product);
     
     const discount = product.oldPrice 
         ? Math.round((1 - product.price / product.oldPrice) * 100)
         : 0;
+    
+    // ДОБАВЛЯЕМ КЛАСС discount ДЛЯ ГРАДИЕНТА
+    if (discount > 0) {
+        card.classList.add('discount');
+    }
+    
+    card.onclick = () => openProductModal(product);
     
     const isFavorite = favorites.includes(product.id);
     
@@ -168,7 +178,7 @@ function openProductModal(product) {
             <div class="modal-price-section">
                 ${product.oldPrice ? `
                     <span class="modal-old-price">${formatPrice(product.oldPrice)}</span>
-                    <span style="color: var(--accent); font-weight: 700;">Скидка ${discount}%!</span><br>
+                    <span style="color: #FF3B3B; font-weight: 700;">🔥 Скидка ${discount}%!</span><br>
                 ` : ''}
                 <span class="modal-price">${formatPrice(product.price)}</span>
             </div>
@@ -265,11 +275,17 @@ function searchProducts() {
 
 function openCart() {
     if (cart.length === 0) {
-        showNotification('Корзина пуста');
+        showNotification('🛒 Корзина пуста');
         return;
     }
     const total = cart.reduce((sum, item) => sum + item.price, 0);
-    tg.sendData(JSON.stringify({items: cart, total: total}));
+    
+    // Отправка данных в бот
+    if (tg.sendData) {
+        tg.sendData(JSON.stringify({items: cart, total: total}));
+    } else {
+        showNotification('❌ Ошибка: откройте в Telegram');
+    }
 }
 
 function formatPrice(price) {
@@ -294,13 +310,19 @@ function showNotification(message) {
     }, 3000);
 }
 
+// Закрытие модалки по клику на фон
 window.onclick = function(event) {
     const modal = document.getElementById('productModal');
-    if (event.target == modal) closeModal();
+    if (event.target == modal) {
+        closeModal();
+    }
 }
 
-// ADMIN ФУНКЦИИ
+// ADMIN ФУНКЦИИ (пока заглушки)
 function editProduct(productId) {
-    // TODO: Открыть форму редактирования
-    showNotification('Функция в разработке');
+    showNotification('⚙️ Админ-функция в разработке');
+}
+
+function deleteProduct(productId) {
+    showNotification('⚙️ Админ-функция в разработке');
 }
