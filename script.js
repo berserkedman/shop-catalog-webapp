@@ -7,16 +7,18 @@ let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
 let isDarkTheme = localStorage.getItem('theme') === 'dark';
 let isAdmin = false;
 
-// НАСТРОЙКИ
-const MANAGER_USERNAME = "твой_username"; // ЗАМЕНИ!
-const INFO_URL = "https://telegra.ph/";
+// Проверяем админа (через start_param или initData)
+if (tg.initDataUnsafe?.user?.id) {
+    const ADMIN_ID = 123456789; // ЗАМЕНИ НА СВОЙ ID!
+    isAdmin = tg.initDataUnsafe.user.id === ADMIN_ID;
+}
 
-// ДЕМО ТОВАРЫ
-let allProducts = [
+// ТОВАРЫ из localStorage или демо
+let allProducts = JSON.parse(localStorage.getItem('products')) || [
     {
         id: 1,
         name: "Угловой диван 'Комфорт'",
-        description: "Современный диван с механизмом трансформации. Обивка из качественной экокожи. Идеально подойдет для гостиной.",
+        description: "Современный диван с механизмом трансформации",
         price: 45000,
         oldPrice: 60000,
         photo: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400",
@@ -25,7 +27,7 @@ let allProducts = [
     {
         id: 2,
         name: "Кресло 'Лофт'",
-        description: "Стильное кресло в стиле лофт. Прочный каркас, удобное сиденье.",
+        description: "Стильное кресло в стиле лофт",
         price: 15000,
         photo: "https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=400",
         category: "Мебель"
@@ -33,7 +35,7 @@ let allProducts = [
     {
         id: 3,
         name: "Журнальный столик",
-        description: "Элегантный столик из натурального дерева с металлическими ножками.",
+        description: "Элегантный столик из дерева",
         price: 8500,
         oldPrice: 12000,
         photo: "https://images.unsplash.com/photo-1594026112284-02bb6f3352fe?w=400",
@@ -43,42 +45,42 @@ let allProducts = [
 
 let currentCategory = 'all';
 
+// СОХРАНЕНИЕ ТОВАРОВ
+function saveProducts() {
+    localStorage.setItem('products', JSON.stringify(allProducts));
+}
+
 // ИНИЦИАЛИЗАЦИЯ
 document.addEventListener('DOMContentLoaded', function() {
-    // Проверяем админа
-    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-        // Здесь можно проверить ID админа
-        isAdmin = false; // Установи true для тестирования админ-функций
-    }
-    
     if (isAdmin) {
         document.body.classList.add('admin-mode');
+        showNotification('🔧 Режим администратора активирован');
     }
     
-    // Применяем тему
     if (isDarkTheme) {
         document.documentElement.setAttribute('data-theme', 'dark');
     }
     
     loadProducts();
     setupEventListeners();
+    
+    // Добавляем кнопку "Добавить товар" для админа
+    if (isAdmin) {
+        addAdminButtons();
+    }
 });
 
+function addAdminButtons() {
+    const header = document.querySelector('.header');
+    const adminPanel = document.createElement('div');
+    adminPanel.className = 'admin-panel';
+    adminPanel.innerHTML = `
+        <button class="admin-add-btn" onclick="showAddProductModal()">➕ Добавить товар</button>
+    `;
+    header.appendChild(adminPanel);
+}
+
 function setupEventListeners() {
-    // Кнопка связи
-    const contactBtn = document.getElementById('contactBtn');
-    if (contactBtn) {
-        contactBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (tg.openTelegramLink) {
-                tg.openTelegramLink(`https://t.me/${MANAGER_USERNAME}`);
-            } else {
-                window.open(`https://t.me/${MANAGER_USERNAME}`, '_blank');
-            }
-        });
-    }
-    
-    // Переключатель темы
     const themeToggle = document.querySelector('.theme-toggle');
     if (themeToggle) {
         themeToggle.addEventListener('click', toggleTheme);
@@ -128,7 +130,6 @@ function createProductCard(product) {
         ? Math.round((1 - product.price / product.oldPrice) * 100)
         : 0;
     
-    // ДОБАВЛЯЕМ КЛАСС discount ДЛЯ ГРАДИЕНТА
     if (discount > 0) {
         card.classList.add('discount');
     }
@@ -142,7 +143,9 @@ function createProductCard(product) {
                 onclick="event.stopPropagation(); toggleFavorite(${product.id})">
         </button>
         ${discount > 0 ? `<div class="discount-badge">-${discount}%</div>` : ''}
-        ${isAdmin ? `<button class="admin-btn" onclick="event.stopPropagation(); editProduct(${product.id})">✏️</button>` : ''}
+        ${isAdmin ? `
+            <button class="admin-delete-btn" onclick="event.stopPropagation(); deleteProduct(${product.id})" title="Удалить">🗑</button>
+        ` : ''}
         <img src="${product.photo}" class="product-image" 
              onerror="this.src='https://via.placeholder.com/400?text=Фото'">
         <div class="product-info">
@@ -178,9 +181,11 @@ function openProductModal(product) {
             <div class="modal-price-section">
                 ${product.oldPrice ? `
                     <span class="modal-old-price">${formatPrice(product.oldPrice)}</span>
+                    ${isAdmin ? `<button class="edit-price-btn" onclick="editPrice(${product.id}, 'old')" title="Изменить старую цену">✏️</button>` : ''}
                     <span style="color: #FF3B3B; font-weight: 700;">🔥 Скидка ${discount}%!</span><br>
                 ` : ''}
                 <span class="modal-price">${formatPrice(product.price)}</span>
+                ${isAdmin ? `<button class="edit-price-btn" onclick="editPrice(${product.id}, 'current')" title="Изменить цену">✏️</button>` : ''}
             </div>
             
             <div class="modal-buttons">
@@ -201,6 +206,158 @@ function openProductModal(product) {
     document.body.style.overflow = 'hidden';
 }
 
+// РЕДАКТИРОВАНИЕ ЦЕНЫ
+function editPrice(productId, priceType) {
+    const product = allProducts.find(p => p.id === productId);
+    const currentPrice = priceType === 'old' ? product.oldPrice : product.price;
+    
+    const newPrice = prompt(
+        `Введите новую ${priceType === 'old' ? 'старую цену' : 'цену'}:`,
+        currentPrice || ''
+    );
+    
+    if (newPrice === null) return;
+    
+    const price = parseFloat(newPrice);
+    if (isNaN(price) || price < 0) {
+        showNotification('❌ Неверная цена');
+        return;
+    }
+    
+    if (priceType === 'old') {
+        product.oldPrice = price > 0 ? price : null;
+    } else {
+        product.price = price;
+    }
+    
+    saveProducts();
+    closeModal();
+    loadProducts();
+    showNotification('✅ Цена обновлена');
+    
+    // Отправляем в бот
+    sendToBot({
+        action: 'update_product',
+        product_id: productId,
+        price: product.price,
+        old_price: product.oldPrice
+    });
+}
+
+// ДОБАВЛЕНИЕ ТОВАРА
+function showAddProductModal() {
+    const modal = document.getElementById('productModal');
+    const modalBody = document.getElementById('modalBody');
+    
+    modalBody.innerHTML = `
+        <div class="modal-body">
+            <h2 class="modal-title">➕ Добавить товар</h2>
+            
+            <div class="form-group">
+                <label>Название товара</label>
+                <input type="text" id="newProductName" placeholder="Например: Диван угловой">
+            </div>
+            
+            <div class="form-group">
+                <label>Описание</label>
+                <textarea id="newProductDesc" placeholder="Описание товара..." rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Цена (₽)</label>
+                <input type="number" id="newProductPrice" placeholder="25000">
+            </div>
+            
+            <div class="form-group">
+                <label>Старая цена (₽, необязательно)</label>
+                <input type="number" id="newProductOldPrice" placeholder="30000">
+            </div>
+            
+            <div class="form-group">
+                <label>Ссылка на фото</label>
+                <input type="text" id="newProductPhoto" placeholder="https://example.com/photo.jpg">
+            </div>
+            
+            <div class="form-group">
+                <label>Категория</label>
+                <input type="text" id="newProductCategory" placeholder="Мебель" value="Мебель">
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="btn btn-primary" onclick="saveNewProduct()">✅ Добавить</button>
+                <button class="btn btn-secondary" onclick="closeModal()">❌ Отмена</button>
+            </div>
+        </div>
+    `;
+    
+    modal.style.display = 'flex';
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+function saveNewProduct() {
+    const name = document.getElementById('newProductName').value.trim();
+    const description = document.getElementById('newProductDesc').value.trim();
+    const price = parseFloat(document.getElementById('newProductPrice').value);
+    const oldPrice = parseFloat(document.getElementById('newProductOldPrice').value) || null;
+    const photo = document.getElementById('newProductPhoto').value.trim();
+    const category = document.getElementById('newProductCategory').value.trim() || 'Мебель';
+    
+    if (!name || !price) {
+        showNotification('❌ Заполните название и цену');
+        return;
+    }
+    
+    const newProduct = {
+        id: Date.now(),
+        name: name,
+        description: description,
+        price: price,
+        oldPrice: oldPrice,
+        photo: photo || 'https://via.placeholder.com/400?text=Фото',
+        category: category
+    };
+    
+    allProducts.push(newProduct);
+    saveProducts();
+    closeModal();
+    loadProducts();
+    showNotification(`✅ Товар "${name}" добавлен!`);
+    
+    // Отправляем в бот
+    sendToBot({
+        action: 'add_product',
+        ...newProduct
+    });
+}
+
+// УДАЛЕНИЕ ТОВАРА
+function deleteProduct(productId) {
+    if (!confirm('Удалить этот товар?')) return;
+    
+    allProducts = allProducts.filter(p => p.id !== productId);
+    saveProducts();
+    loadProducts();
+    showNotification('🗑 Товар удален');
+    
+    // Отправляем в бот
+    sendToBot({
+        action: 'delete_product',
+        product_id: productId
+    });
+}
+
+// ОТПРАВКА ДАННЫХ В БОТ
+function sendToBot(data) {
+    if (tg.sendData) {
+        try {
+            tg.sendData(JSON.stringify(data));
+        } catch (e) {
+            console.error('Ошибка отправки в бот:', e);
+        }
+    }
+}
+
 function closeModal() {
     const modal = document.getElementById('productModal');
     modal.classList.remove('show');
@@ -213,9 +370,7 @@ function closeModal() {
 function addToCart(productId) {
     const product = allProducts.find(p => p.id === productId);
     
-    const alreadyInCart = cart.some(item => item.id === productId);
-    
-    if (alreadyInCart) {
+    if (cart.some(item => item.id === productId)) {
         showNotification('⚠️ Товар уже в корзине');
         return;
     }
@@ -280,12 +435,11 @@ function openCart() {
     }
     const total = cart.reduce((sum, item) => sum + item.price, 0);
     
-    // Отправка данных в бот
-    if (tg.sendData) {
-        tg.sendData(JSON.stringify({items: cart, total: total}));
-    } else {
-        showNotification('❌ Ошибка: откройте в Telegram');
-    }
+    sendToBot({
+        action: 'order',
+        items: cart,
+        total: total
+    });
 }
 
 function formatPrice(price) {
@@ -298,31 +452,15 @@ function showNotification(message) {
     notification.textContent = message;
     document.body.appendChild(notification);
     
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 10);
+    setTimeout(() => notification.classList.add('show'), 10);
     
     setTimeout(() => {
         notification.classList.remove('show');
-        setTimeout(() => {
-            notification.remove();
-        }, 400);
+        setTimeout(() => notification.remove(), 400);
     }, 3000);
 }
 
-// Закрытие модалки по клику на фон
 window.onclick = function(event) {
     const modal = document.getElementById('productModal');
-    if (event.target == modal) {
-        closeModal();
-    }
-}
-
-// ADMIN ФУНКЦИИ (пока заглушки)
-function editProduct(productId) {
-    showNotification('⚙️ Админ-функция в разработке');
-}
-
-function deleteProduct(productId) {
-    showNotification('⚙️ Админ-функция в разработке');
+    if (event.target == modal) closeModal();
 }
