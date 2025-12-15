@@ -9,7 +9,7 @@ let isAdmin = false;
 
 // Проверяем админа (через start_param или initData)
 if (tg.initDataUnsafe?.user?.id) {
-    const ADMIN_ID = 123456789; // ЗАМЕНИ НА СВОЙ ID!
+    const ADMIN_ID = 8379534280; // ЗАМЕНИ НА СВОЙ ID!
     isAdmin = tg.initDataUnsafe.user.id === ADMIN_ID;
 }
 
