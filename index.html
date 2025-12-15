@@ -10,6 +10,13 @@
 <body>
     <div class="header">
         <h1>🛍 Каталог товаров</h1>
+        
+        <!-- НОВЫЕ КНОПКИ -->
+        <div class="header-buttons">
+            <a href="#" id="contactBtn" class="header-btn">📞 Связь с менеджером</a>
+            <a href="#" id="infoBtn" class="header-btn">ℹ️ О магазине</a>
+        </div>
+        
         <div class="tabs">
             <button class="tab active" onclick="showCategory('all')">Все</button>
             <button class="tab" onclick="showCategory('Мебель')">Мебель</button>
@@ -21,15 +28,12 @@
         <input type="text" id="searchInput" placeholder="🔍 Поиск товаров..." onkeyup="searchProducts()">
     </div>
 
-    <div class="products-grid" id="productsGrid">
-        <!-- Товары будут загружены через JS -->
-    </div>
+    <div class="products-grid" id="productsGrid"></div>
 
     <div class="cart-button" onclick="openCart()">
         🛒 Корзина (<span id="cartCount">0</span>)
     </div>
 
-    <!-- Модальное окно товара -->
     <div id="productModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal()">&times;</span>
