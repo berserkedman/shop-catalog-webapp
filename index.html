@@ -8,35 +8,48 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="header">
-        <button class="theme-toggle">🌙</button>
-        <h1>🛍 Каталог товаров</h1>
-        
-        <div class="header-buttons">
-            <a href="#" id="contactBtn" class="header-btn">📞 Связь</a>
+    <!-- ГЛАВНАЯ СТРАНИЦА -->
+    <div class="page active" id="mainPage">
+        <div class="header">
+            <button class="theme-toggle">🌙</button>
+            <h1>🛍 Каталог товаров</h1>
+            
+            <div class="header-buttons">
+                <button class="header-btn" onclick="contactManager()">📞 Связь</button>
+                <button class="header-btn" onclick="showFavorites()">⭐ Избранное</button>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab active" onclick="showCategory('all')">Все</button>
+                <button class="tab" onclick="showCategory('Мебель')">Мебель</button>
+                <button class="tab" onclick="showCategory('Декор')">Декор</button>
+            </div>
         </div>
-        
-        <div class="tabs">
-            <button class="tab active" onclick="showCategory('all')">Все</button>
-            <button class="tab" onclick="showCategory('Мебель')">Мебель</button>
-            <button class="tab" onclick="showCategory('Декор')">Декор</button>
+
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="🔍 Поиск..." onkeyup="searchProducts()">
         </div>
+
+        <div class="products-grid" id="productsGrid"></div>
+
+        <button class="cart-button" onclick="openCart()">
+            🛒 (<span id="cartCount">0</span>)
+        </button>
     </div>
-
-    <div class="search-container">
-        <input type="text" id="searchInput" placeholder="🔍 Поиск товаров..." onkeyup="searchProducts()">
-    </div>
-
-    <div class="products-grid" id="productsGrid"></div>
-
-    <div class="cart-button" onclick="openCart()">
-        🛒 Корзина (<span id="cartCount">0</span>)
-    </div>
-
-    <div id="productModal" class="modal">
+    
+    <!-- СТРАНИЦА ТОВАРА -->
+    <div class="page product-page" id="productPage"></div>
+    
+    <!-- СТРАНИЦА КОРЗИНЫ -->
+    <div class="page product-page" id="cartPage"></div>
+    
+    <!-- СТРАНИЦА ИЗБРАННОГО -->
+    <div class="page product-page" id="favoritesPage"></div>
+    
+    <!-- МОДАЛКА ДЛЯ ФОРМ -->
+    <div id="addProductModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <div id="modalBody"></div>
+            <div class="modal-body"></div>
         </div>
     </div>
 
