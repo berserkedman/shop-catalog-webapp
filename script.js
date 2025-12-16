@@ -7,13 +7,24 @@ let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
 let isDarkTheme = localStorage.getItem('theme') === 'dark';
 let isAdmin = false;
 
-// Проверяем админа (через start_param или initData)
-if (tg.initDataUnsafe?.user?.id) {
-    const ADMIN_ID = 8379534280; // ЗАМЕНИ НА СВОЙ ID!
-    isAdmin = tg.initDataUnsafe.user.id === ADMIN_ID;
+// ПРОВЕРЯЕМ ADMIN РЕЖИМ ИЗ URL
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('admin') === 'true') {
+    isAdmin = true;
 }
 
-// ТОВАРЫ из localStorage или демо
+// ТАКЖЕ ПРОВЕРЯЕМ ЧЕРЕЗ initData
+if (tg.initDataUnsafe?.user?.id) {
+    const ADMIN_ID = 123456789; // ЗАМЕНИ НА СВОЙ ID ОТ @userinfobot!
+    if (tg.initDataUnsafe.user.id === ADMIN_ID) {
+        isAdmin = true;
+    }
+}
+
+console.log('🔧 Admin mode:', isAdmin);
+console.log('👤 User ID:', tg.initDataUnsafe?.user?.id);
+
+// ТОВАРЫ из localStorage
 let allProducts = JSON.parse(localStorage.getItem('products')) || [
     {
         id: 1,
@@ -45,7 +56,7 @@ let allProducts = JSON.parse(localStorage.getItem('products')) || [
 
 let currentCategory = 'all';
 
-// СОХРАНЕНИЕ ТОВАРОВ
+// СОХРАНЕНИЕ
 function saveProducts() {
     localStorage.setItem('products', JSON.stringify(allProducts));
 }
@@ -55,6 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (isAdmin) {
         document.body.classList.add('admin-mode');
         showNotification('🔧 Режим администратора активирован');
+        addAdminButtons();
     }
     
     if (isDarkTheme) {
@@ -63,11 +75,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     loadProducts();
     setupEventListeners();
-    
-    // Добавляем кнопку "Добавить товар" для админа
-    if (isAdmin) {
-        addAdminButtons();
-    }
 });
 
 function addAdminButtons() {
@@ -235,7 +242,6 @@ function editPrice(productId, priceType) {
     loadProducts();
     showNotification('✅ Цена обновлена');
     
-    // Отправляем в бот
     sendToBot({
         action: 'update_product',
         product_id: productId,
@@ -324,10 +330,14 @@ function saveNewProduct() {
     loadProducts();
     showNotification(`✅ Товар "${name}" добавлен!`);
     
-    // Отправляем в бот
     sendToBot({
         action: 'add_product',
-        ...newProduct
+        name: name,
+        description: description,
+        price: price,
+        old_price: oldPrice,
+        photo: photo,
+        category: category
     });
 }
 
@@ -335,25 +345,25 @@ function saveNewProduct() {
 function deleteProduct(productId) {
     if (!confirm('Удалить этот товар?')) return;
     
+    const product = allProducts.find(p => p.id === productId);
     allProducts = allProducts.filter(p => p.id !== productId);
     saveProducts();
     loadProducts();
     showNotification('🗑 Товар удален');
     
-    // Отправляем в бот
     sendToBot({
         action: 'delete_product',
         product_id: productId
     });
 }
 
-// ОТПРАВКА ДАННЫХ В БОТ
+// ОТПРАВКА В БОТ
 function sendToBot(data) {
     if (tg.sendData) {
         try {
             tg.sendData(JSON.stringify(data));
         } catch (e) {
-            console.error('Ошибка отправки в бот:', e);
+            console.error('Ошибка отправки:', e);
         }
     }
 }
