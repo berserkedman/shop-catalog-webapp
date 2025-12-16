@@ -15,7 +15,7 @@ if (urlParams.get('admin') === 'true') {
 
 // ТАКЖЕ ПРОВЕРЯЕМ ЧЕРЕЗ initData
 if (tg.initDataUnsafe?.user?.id) {
-    const ADMIN_ID = 123456789; // ЗАМЕНИ НА СВОЙ ID ОТ @userinfobot!
+    const ADMIN_ID = 8379534280; // ЗАМЕНИ НА СВОЙ ID ОТ @userinfobot!
     if (tg.initDataUnsafe.user.id === ADMIN_ID) {
         isAdmin = true;
     }
