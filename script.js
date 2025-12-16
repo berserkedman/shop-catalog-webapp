@@ -8,7 +8,7 @@ let isDarkTheme = localStorage.getItem('theme') === 'dark';
 let isAdmin = false;
 
 // НАСТРОЙКИ
-const MANAGER_USERNAME = "твой_username"; // ЗАМЕНИ!
+const MANAGER_USERNAME = "timma_65"; // ЗАМЕНИ!
 
 // ПРОВЕРКА АДМИНА
 const urlParams = new URLSearchParams(window.location.search);
@@ -17,7 +17,7 @@ if (urlParams.get('admin') === 'true') {
 }
 
 if (tg.initDataUnsafe?.user?.id) {
-    const ADMIN_ID = 123456789; // ЗАМЕНИ НА СВОЙ ID!
+    const ADMIN_ID = 8379534280; // ЗАМЕНИ НА СВОЙ ID!
     if (tg.initDataUnsafe.user.id === ADMIN_ID) {
         isAdmin = true;
     }
